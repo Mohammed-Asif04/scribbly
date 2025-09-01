@@ -60,7 +60,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
       </div>
       <div className="flex justify-center">
         <div className="p-2 rounded-full cursor-pointer transition-all ring-4 ring-purple-500 ring-offset-2">
-          <div className="w-18 h-18 flex items-center justify-center bg-gray-200 rounded-full overflow-hidden">
+          <div className="w-18 h-19 flex items-center justify-center bg-gray-200 rounded-full overflow-hidden">
             {currentAvatar ? (
               <Image
                 src={currentAvatar.src}

@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 import AvatarSelector from "@/components/AvatarSelector";
 
 const ScribllyHome = () => {
@@ -37,10 +38,12 @@ const ScribllyHome = () => {
     console.log("Created private room with code:", newRoomCode);
   };
 
-  const handleCopyRoomCode = () => {
+ const handleCopyRoomCode = () => {
     navigator.clipboard.writeText(roomCode);
-    // You could add a toast notification here
-    alert("Room code copied to clipboard!");
+    toast.success("Room code copied to clipboard!", {
+      description: `Code: ${roomCode}`,
+      duration: 2000,
+    });
   };
 
   const handleJoinRoom = () => {
@@ -104,27 +107,29 @@ const ScribllyHome = () => {
             onAvatarChange={handleAvatarChange}
           />
 
-          {/* Join Room Input (always visible) */}
-          <div className="mb-4">
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                value={joinRoomCode}
-                onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
-                placeholder="Enter room code"
-                className="w-full text-sm flex-1"
-                maxLength={6}
-              />
-              <Button
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-                disabled={!joinRoomCode.trim() || !name.trim()}
-                onClick={handleJoinRoom}
-                size="sm"
-              >
-                Join
-              </Button>
+          {/* Join Room Input (only shown when NOT creating a private room) */}
+          {!isCreatingPrivateRoom && (
+            <div className="mb-4">
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  value={joinRoomCode}
+                  onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
+                  placeholder="Enter room code"
+                  className="w-full text-sm flex-1"
+                  maxLength={6}
+                />
+                <Button
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  disabled={!joinRoomCode.trim() || !name.trim()}
+                  onClick={handleJoinRoom}
+                  size="sm"
+                >
+                  Join
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Private Room Section */}
           {isCreatingPrivateRoom ? (
