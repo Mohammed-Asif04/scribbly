@@ -5,7 +5,7 @@ const Background = () => {
   return (
     <div className="absolute inset-0 z-0">
       <Image
-        src="/scribbly-background.jpg"
+        src="/background.avif"
         alt="Scriblly background"
         fill
         className="object-cover"
@@ -17,5 +17,4 @@ const Background = () => {
     </div>
   );
 };
-
 export default Background;
