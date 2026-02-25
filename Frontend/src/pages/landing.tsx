@@ -23,6 +23,24 @@ const ScribllyHome: React.FC = () => {
     setSelectedAvatar(avatarId);
   };
 
+  const handlePlayButtonClick = () => {
+    const username = name;
+    const avatar = selectedAvatar;
+
+    if (!username || !avatar || !language) {
+      console.log("please fill in all the details");
+      return;
+    }
+    const userData = {
+      username,
+      language,
+      avatar,
+    };
+    console.log("User Data:", userData);
+    localStorage.setItem("username", username);
+    navigate("/game", { state: { username, avatar } });
+  };
+
   return (
     <>
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
@@ -82,7 +100,7 @@ const ScribllyHome: React.FC = () => {
                 <Button
                   className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors text-sm"
                   disabled={!name.trim()}
-                  onClick={() => navigate("/game")}
+                  onClick={handlePlayButtonClick}
                 >
                   Quick Play
                 </Button>
