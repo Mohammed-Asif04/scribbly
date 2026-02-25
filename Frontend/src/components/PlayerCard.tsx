@@ -8,7 +8,7 @@ interface PlayerCardProps {
     avatar: string;
     points: number;
   };
-  rank: number;
+  rank?: number;
   curruser?: boolean;
   playerDrawing?: { id: string | number } | null;
 }
@@ -21,7 +21,7 @@ const rankStyles: Record<number, string> = {
 
 const PlayerCard: React.FC<PlayerCardProps> = ({
   pl,
-  rank,
+  rank = 0,
   curruser = false,
   playerDrawing = null,
 }) => {
@@ -40,7 +40,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       <span
         className={cn(
           "text-lg font-extrabold w-8 text-center shrink-0",
-          rankStyles[rank] || "text-gray-500"
+          rankStyles[rank ?? 0] || "text-gray-500"
         )}
       >
         #{rank}
