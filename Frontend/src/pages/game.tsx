@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import Background from "@/components/Background";
 import PlayerCard from "@/components/PlayerCard";
 import Canvas from "@/components/Canvas";
+import WordBar from "@/components/Wordbar";
+import ChatSidebar from "@/components/ChatSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { wordsArray, getWordsArrayLength } from "@/components/word";
 
 interface Player {
@@ -46,7 +45,8 @@ const GamePage: React.FC = () => {
   const [guessedWord, setGuessedWord] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   const [allChats, setAllChats] = useState<ChatMessage[]>([]);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [round, setRound] = useState(1);
+  const [totalRounds, setTotalRounds] = useState(3);
 
   // Redirect if no username at all
   useEffect(() => {
@@ -246,20 +246,7 @@ const GamePage: React.FC = () => {
     return newWordsArray;
   };
 
-  // Word hint display
-  const renderWordHint = () => {
-    if (currentUserDrawing && selectedWord) {
-      return <span className="font-bold text-purple-700">{selectedWord}</span>;
-    }
-    if (wordLen > 0) {
-      return (
-        <span className="font-mono tracking-widest text-lg">
-          {Array.from({ length: wordLen }, () => "_ ").join("")}
-        </span>
-      );
-    }
-    return null;
-  };
+
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
@@ -328,17 +315,17 @@ const GamePage: React.FC = () => {
 
         {/* Main Game Area */}
         <div className="flex flex-col gap-3 flex-1">
-          {/* Word Hint Bar */}
-          {gameStarted && (
-            <Card className="backdrop-blur-sm bg-white/90 shadow-lg">
-              <CardContent className="py-3 px-4 flex items-center justify-center gap-4">
-                {showClock && (
-                  <span className="text-sm text-gray-500">⏰</span>
-                )}
-                <div className="text-center">{renderWordHint()}</div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Word Bar */}
+          <WordBar
+            showClock={showClock}
+            wordLen={wordLen}
+            gameStarted={gameStarted}
+            showWords={showWords}
+            currentUserDrawing={currentUserDrawing}
+            selectedWord={selectedWord}
+            round={round}
+            totalRounds={totalRounds}
+          />
 
           {/* Canvas */}
           <Card className="backdrop-blur-sm bg-white/90 shadow-lg">
@@ -352,74 +339,15 @@ const GamePage: React.FC = () => {
         </div>
 
         {/* Chat Sidebar */}
-        <Card className="w-64 shrink-0 backdrop-blur-sm bg-white/90 shadow-lg self-start flex flex-col" style={{ maxHeight: "600px" }}>
-          <CardHeader className="pb-2 px-3 pt-4">
-            <CardTitle className="text-base text-purple-600 text-center">
-              Chat
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-2 pb-2 flex flex-col flex-1 overflow-hidden">
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto flex flex-col-reverse gap-1 mb-2 min-h-[300px] max-h-[440px]">
-              {allChats.map((chat, idx) => (
-                <div
-                  key={idx}
-                  className={cn(
-                    "text-xs px-2 py-1 rounded",
-                    chat.rightGuess
-                      ? "bg-green-100 text-green-700 font-semibold"
-                      : "text-gray-700"
-                  )}
-                >
-                  {chat.rightGuess ? (
-                    <span>🎉 {chat.message}</span>
-                  ) : (
-                    <span>
-                      <strong>{chat.sender}:</strong> {chat.message}
-                    </span>
-                  )}
-                </div>
-              ))}
-              <div ref={chatEndRef} />
-            </div>
-
-            {/* Chat Input */}
-            <form onSubmit={handleSubmitChat} className="flex gap-1.5">
-              <Input
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Type your guess..."
-                disabled={currentUserDrawing || showWords || !gameStarted || guessedWord}
-                className={cn(
-                  "text-xs h-8",
-                  (currentUserDrawing || showWords || !gameStarted) && "cursor-not-allowed opacity-50"
-                )}
-              />
-              <Button
-                type="submit"
-                size="sm"
-                disabled={currentUserDrawing || showWords || !gameStarted || guessedWord || !inputMessage.trim()}
-                className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs shrink-0"
-              >
-                Send
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        <ChatSidebar
+          allChats={allChats}
+          inputMessage={inputMessage}
+          setInputMessage={setInputMessage}
+          onSubmitChat={handleSubmitChat}
+          disabled={currentUserDrawing || showWords || !gameStarted || guessedWord}
+          sendDisabled={currentUserDrawing || showWords || !gameStarted || guessedWord || !inputMessage.trim()}
+        />
       </div>
-
-      {/* Status bar */}
-      {!gameStarted && (
-        <div className="relative z-10 mt-4">
-          <Card className="backdrop-blur-sm bg-white/90 shadow-lg">
-            <CardContent className="py-3 px-6">
-              <p className="text-sm text-gray-500 text-center">
-                ⏳ Waiting for the game to start...
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 };
