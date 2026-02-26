@@ -8,6 +8,7 @@ import WordBar from "@/components/Wordbar";
 import ChatSidebar from "@/components/ChatSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { wordsArray, getWordsArrayLength } from "@/components/word";
+import { Button } from "@/components/ui/button";
 
 interface Player {
   id: string;
@@ -285,50 +286,50 @@ const GamePage: React.FC = () => {
         </div>
       )}
 
-      <div className="relative z-10 flex gap-4 w-full max-w-6xl">
-        {/* Player List Sidebar */}
-        <Card className="w-56 shrink-0 backdrop-blur-sm bg-white/90 shadow-lg self-start">
-          <CardHeader className="pb-2 px-3 pt-4">
-            <CardTitle className="text-base text-purple-600 text-center">
-              Players
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-2 pb-3">
-            <div className="flex flex-col gap-1">
-              {allPlayers.map((player, index) => (
-                <PlayerCard
-                  key={player.id}
-                  pl={player}
-                  rank={index + 1}
-                  curruser={player.id === socket?.id}
-                  playerDrawing={playerDrawing}
-                />
-              ))}
-              {allPlayers.length === 0 && (
-                <p className="text-sm text-gray-400 text-center py-4">
-                  Connecting...
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="relative z-10 flex flex-col gap-3 w-full max-w-6xl">
+        {/* Word Bar - full width above the 3-column row */}
+        <WordBar
+          showClock={showClock}
+          wordLen={wordLen}
+          gameStarted={gameStarted}
+          showWords={showWords}
+          currentUserDrawing={currentUserDrawing}
+          selectedWord={selectedWord}
+          round={round}
+          totalRounds={totalRounds}
+        />
 
-        {/* Main Game Area */}
-        <div className="flex flex-col gap-3 flex-1">
-          {/* Word Bar */}
-          <WordBar
-            showClock={showClock}
-            wordLen={wordLen}
-            gameStarted={gameStarted}
-            showWords={showWords}
-            currentUserDrawing={currentUserDrawing}
-            selectedWord={selectedWord}
-            round={round}
-            totalRounds={totalRounds}
-          />
+        {/* 3-column row: Players | Canvas | Chat */}
+        <div className="flex gap-4 items-stretch">
+          {/* Player List Sidebar */}
+          <Card className="w-56 shrink-0 backdrop-blur-sm bg-white/90 shadow-lg">
+            <CardHeader className="pb-2 px-3 pt-4">
+              <CardTitle className="text-base text-purple-600 text-center">
+                Players
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-2 pb-3">
+              <div className="flex flex-col gap-1">
+                {allPlayers.map((player, index) => (
+                  <PlayerCard
+                    key={player.id}
+                    pl={player}
+                    rank={index + 1}
+                    curruser={player.id === socket?.id}
+                    playerDrawing={playerDrawing}
+                  />
+                ))}
+                {allPlayers.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-4">
+                    Connecting...
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Canvas */}
-          <Card className="backdrop-blur-sm bg-white/90 shadow-lg">
+          <Card className="backdrop-blur-sm bg-white/90 shadow-lg flex-1">
             <CardContent className="p-3">
               <Canvas
                 socket={socket}
@@ -336,17 +337,17 @@ const GamePage: React.FC = () => {
               />
             </CardContent>
           </Card>
-        </div>
 
-        {/* Chat Sidebar */}
-        <ChatSidebar
-          allChats={allChats}
-          inputMessage={inputMessage}
-          setInputMessage={setInputMessage}
-          onSubmitChat={handleSubmitChat}
-          disabled={currentUserDrawing || showWords || !gameStarted || guessedWord}
-          sendDisabled={currentUserDrawing || showWords || !gameStarted || guessedWord || !inputMessage.trim()}
-        />
+          {/* Chat Sidebar */}
+          <ChatSidebar
+            allChats={allChats}
+            inputMessage={inputMessage}
+            setInputMessage={setInputMessage}
+            onSubmitChat={handleSubmitChat}
+            disabled={currentUserDrawing || showWords || !gameStarted || guessedWord}
+            sendDisabled={currentUserDrawing || showWords || !gameStarted || guessedWord || !inputMessage.trim()}
+          />
+        </div>
       </div>
     </div>
   );
