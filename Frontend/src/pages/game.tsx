@@ -329,7 +329,7 @@ const GamePage: React.FC = () => {
           </Card>
 
           {/* Canvas */}
-          <Card className="backdrop-blur-sm bg-white/90 shadow-lg flex-1">
+          <Card className="backdrop-blur-sm bg-white/90 shadow-lg flex-1z">
             <CardContent className="p-3">
               <Canvas
                 socket={socket}
