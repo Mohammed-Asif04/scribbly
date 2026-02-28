@@ -76,7 +76,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       {/* Drawing indicator */}
       {isDrawing && (
         <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full font-medium shrink-0">
-          ✏️ Drawing
+          ✏️ 
         </span>
       )}
     </div>
