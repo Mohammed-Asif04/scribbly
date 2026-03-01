@@ -21,6 +21,8 @@ interface ChatMessage {
   sender: string;
   message: string;
   rightGuess: boolean;
+  system?: boolean;
+  type?: "join" | "leave" | "drawing" | "word-reveal" | "right-guess";
 }
 
 const ENDPOINT_LOCAL = "http://localhost:3001/";
@@ -100,6 +102,27 @@ const GamePage: React.FC = () => {
     return () => { socket.off("updated-players"); };
   }, [socket]);
 
+  // Listen for player join/leave events
+  useEffect(() => {
+    if (!socket) return;
+    socket.on("player-joined", ({ name }: { name: string }) => {
+      setAllChats((prev) => [
+        { sender: "", message: `${name} joined the match`, rightGuess: false, system: true, type: "join" },
+        ...prev,
+      ]);
+    });
+    socket.on("player-left", ({ name }: { name: string }) => {
+      setAllChats((prev) => [
+        { sender: "", message: `${name} left the match`, rightGuess: false, system: true, type: "leave" },
+        ...prev,
+      ]);
+    });
+    return () => {
+      socket.off("player-joined");
+      socket.off("player-left");
+    };
+  }, [socket]);
+
   // Game start/stop events
   useEffect(() => {
     if (!socket) return;
@@ -144,9 +167,21 @@ const GamePage: React.FC = () => {
       if (player.id === socket.id) {
         setCurrentUserDrawing(true);
       }
+      // System message: "X is drawing now!"
+      setAllChats((prev) => [
+        { sender: "", message: `${player.name} is drawing now!`, rightGuess: false, system: true, type: "drawing" },
+        ...prev,
+      ]);
     });
 
-    socket.on("end-turn", (player: Player) => {
+    socket.on("end-turn", ({ player, word: correctWord }: { player: Player; word: string }) => {
+      // System message: "The word was 'X'"
+      if (correctWord) {
+        setAllChats((prev) => [
+          { sender: "", message: `The word was '${correctWord}'`, rightGuess: false, system: true, type: "word-reveal" },
+          ...prev,
+        ]);
+      }
       setGuessedWord(false);
       setPlayerDrawing(null);
       setShowClock(false);
@@ -188,19 +223,19 @@ const GamePage: React.FC = () => {
         if (player.id === socket.id) {
           setGuessedWord(true);
           setAllChats((prev) => [
-            { sender: "you", message: `You guessed the right word! (${msg})`, rightGuess },
+            { sender: player.name, message: `${player.name} guessed the word!`, rightGuess, type: "right-guess" },
             ...prev,
           ]);
         } else {
           setAllChats((prev) => [
-            { sender: player.name, message: `${player.name} guessed the word right!`, rightGuess },
+            { sender: player.name, message: `${player.name} guessed the word!`, rightGuess, type: "right-guess" },
             ...prev,
           ]);
         }
       } else {
         if (player.id === socket.id) {
           setAllChats((prev) => [
-            { sender: "you", message: msg, rightGuess },
+            { sender: player.name, message: msg, rightGuess },
             ...prev,
           ]);
         } else {

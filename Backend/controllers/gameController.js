@@ -46,7 +46,7 @@ export const startDraw = (io) => {
 
 export const endTurn = (io) => {
   const players = getPlayers();
-  io.emit("end-turn", players[drawerIndex]);
+  io.emit("end-turn", { player: players[drawerIndex], word });
 
   playerGuessedRightWord = [];
   if (timeout) {

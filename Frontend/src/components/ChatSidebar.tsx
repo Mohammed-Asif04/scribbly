@@ -8,6 +8,8 @@ interface ChatMessage {
   sender: string;
   message: string;
   rightGuess: boolean;
+  system?: boolean;
+  type?: "join" | "leave" | "drawing" | "word-reveal" | "right-guess";
 }
 
 interface ChatSidebarProps {
@@ -38,19 +40,24 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       </CardHeader>
       <CardContent className="px-2 pb-2 flex flex-col flex-1 overflow-hidden">
         {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto flex flex-col-reverse gap-1 mb-2 min-h-[300px] max-h-[440px]">
+        <div className="flex-1 overflow-y-auto flex flex-col-reverse gap-1 mb-2">
           {allChats.map((chat, idx) => (
             <div
               key={idx}
               className={cn(
-                "text-xs px-2 py-1 rounded",
-                chat.rightGuess
-                  ? "bg-green-100 text-green-700 font-semibold"
-                  : "text-gray-700"
+                "text-sm px-2 py-1.5 rounded",
+                chat.type === "join" && "text-green-600 font-semibold",
+                chat.type === "leave" && "text-red-500 font-semibold",
+                chat.type === "drawing" && "bg-gray-100 text-blue-600 font-bold",
+                chat.type === "word-reveal" && "bg-gray-100 text-green-600 font-bold",
+                chat.type === "right-guess" && "bg-green-100 text-green-700 font-semibold",
+                !chat.type && !chat.system && "text-gray-700"
               )}
             >
-              {chat.rightGuess ? (
-                <span>🎉 {chat.message}</span>
+              {chat.type === "right-guess" ? (
+                <span>{chat.message}</span>
+              ) : chat.system ? (
+                <span>{chat.message}</span>
               ) : (
                 <span>
                   <strong>{chat.sender}:</strong> {chat.message}
@@ -62,7 +69,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         </div>
 
         {/* Chat Input */}
-        <form onSubmit={onSubmitChat} className="flex gap-1.5">
+        <form onSubmit={onSubmitChat} className="flex gap-1.5 mt-auto">
           <Input
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}

@@ -4,6 +4,7 @@ import {
   addPlayer,
   removePlayer,
   getPlayers,
+  getPlayerById,
 } from "./controllers/playerController.js";
 import {
   startGame,
@@ -29,6 +30,7 @@ io.on("connection", (socket) => {
     const players = getPlayers();
     console.log("Players:", players);
     io.emit("updated-players", players);
+    io.emit("player-joined", { name: username });
 
     if (players.length === 2) {
       startGame(io);
@@ -56,10 +58,14 @@ io.on("connection", (socket) => {
   // Player disconnect
   socket.on("disconnect", (reason) => {
     console.log("User disconnected:", socket.id, "Reason:", reason);
+    const leavingPlayer = getPlayerById(socket.id);
     removePlayer(socket.id);
 
     const players = getPlayers();
     io.emit("updated-players", players);
+    if (leavingPlayer) {
+      io.emit("player-left", { name: leavingPlayer.name });
+    }
     io.to(socket.id).emit("user-disconnected", {});
 
     if (players.length <= 1) {
