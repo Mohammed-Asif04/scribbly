@@ -337,7 +337,7 @@ const GamePage: React.FC = () => {
         {/* 3-column row: Players | Canvas | Chat */}
         <div className="flex gap-4 items-stretch">
           {/* Player List Sidebar */}
-          <Card className="w-56 shrink-0 backdrop-blur-sm bg-white/90 shadow-lg">
+          <Card className="w-56 shrink-0 backdrop-blur-sm bg-white/90 shadow-lg self-start transition-all duration-300">
             <CardHeader className="pb-2 px-3 pt-4">
               <CardTitle className="text-base text-purple-600 text-center">
                 Players
