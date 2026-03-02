@@ -353,7 +353,7 @@ const GamePage: React.FC = () => {
             </CardHeader>
             <CardContent className="px-2 pb-3">
               <div className="flex flex-col gap-1">
-                {allPlayers.map((player, index) => (
+                {[...allPlayers].sort((a, b) => b.points - a.points).map((player, index) => (
                   <PlayerCard
                     key={player.id}
                     pl={player}
