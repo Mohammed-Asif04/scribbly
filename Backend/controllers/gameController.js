@@ -7,7 +7,8 @@ let timeout = null;
 let timerInterval = null;
 let drawStartTime = null;
 const TURN_DURATION = 75; 
-let round = 0;
+let round = 1;
+const TOTAL_ROUNDS = 3;
 let playerGuessedRightWord = [];
 
 const clearTimers = () => {
@@ -24,14 +25,21 @@ const clearTimers = () => {
 
 export const startGame = (io) => {
   console.log("Game started");
+  round = 1;
+  drawerIndex = 0;
   io.emit("game-start", {});
+  io.emit("round-update", { round, totalRounds: TOTAL_ROUNDS });
   startTurn(io);
 };
 
 export const stopGame = (io) => {
   console.log("Game stopped");
+  const players = getPlayers();
+  const sortedPlayers = [...players].sort((a, b) => b.points - a.points);
+  io.emit("game-over", { players: sortedPlayers });
   io.emit("game-stop", {});
   drawerIndex = 0;
+  round = 1;
   clearTimers();
 };
 
@@ -81,7 +89,22 @@ export const endTurn = (io) => {
   io.emit("clear-canvas");
 
   // Advance to next drawer
-  drawerIndex = (drawerIndex + 1) % players.length;
+  const nextDrawerIndex = (drawerIndex + 1) % players.length;
+
+  // If we've wrapped around (all players have drawn), advance the round
+  if (nextDrawerIndex <= drawerIndex || players.length === 1) {
+    round++;
+    io.emit("round-update", { round, totalRounds: TOTAL_ROUNDS });
+
+    // Check if all rounds are complete
+    if (round > TOTAL_ROUNDS) {
+      console.log("All rounds complete, stopping game");
+      stopGame(io);
+      return;
+    }
+  }
+
+  drawerIndex = nextDrawerIndex;
   startTurn(io);
 };
 

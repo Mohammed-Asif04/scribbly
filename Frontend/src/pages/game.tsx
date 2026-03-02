@@ -6,6 +6,7 @@ import PlayerCard from "@/components/PlayerCard";
 import Canvas from "@/components/Canvas";
 import WordBar from "@/components/Wordbar";
 import ChatSidebar from "@/components/ChatSidebar";
+import GameOver from "@/components/GameOver";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { wordsArray, getWordsArrayLength } from "@/components/word";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ const GamePage: React.FC = () => {
   const [round, setRound] = useState(1);
   const [totalRounds, setTotalRounds] = useState(3);
   const [remainingTime, setRemainingTime] = useState(0);
+  const [gameOverData, setGameOverData] = useState<{ players: Player[] } | null>(null);
 
   // Redirect if no username at all
   useEffect(() => {
@@ -130,10 +132,12 @@ const GamePage: React.FC = () => {
 
     socket.on("game-start", () => {
       setGameStarted(true);
+      setGameOverData(null);
     });
 
     socket.on("game-already-started", () => {
       setGameStarted(true);
+      setGameOverData(null);
     });
 
     socket.on("game-stop", () => {
@@ -143,10 +147,21 @@ const GamePage: React.FC = () => {
       setPlayerDrawing(null);
     });
 
+    socket.on("round-update", ({ round: r, totalRounds: tr }: { round: number; totalRounds: number }) => {
+      setRound(r);
+      setTotalRounds(tr);
+    });
+
+    socket.on("game-over", ({ players }: { players: Player[] }) => {
+      setGameOverData({ players });
+    });
+
     return () => {
       socket.off("game-start");
       socket.off("game-already-started");
       socket.off("game-stop");
+      socket.off("round-update");
+      socket.off("game-over");
     };
   }, [socket]);
 
@@ -296,6 +311,15 @@ const GamePage: React.FC = () => {
       <Background />
 
       {/* Word Selection Overlay */}
+      {/* Game Over Overlay */}
+      {gameOverData && (
+        <GameOver
+          players={gameOverData.players}
+          currentUserId={socket?.id}
+          onBackToLobby={() => navigate("/")}
+        />
+      )}
+
       {showWords && playerDrawing && socket && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <Card className="bg-white/95 shadow-2xl">
