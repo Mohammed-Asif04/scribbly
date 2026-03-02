@@ -6,7 +6,7 @@ let word = null;
 let timeout = null;
 let timerInterval = null;
 let drawStartTime = null;
-const TURN_DURATION = 60; // seconds
+const TURN_DURATION = 75; // seconds
 let round = 0;
 let playerGuessedRightWord = [];
 

@@ -23,7 +23,7 @@ const WordBar: React.FC<WordBarProps> = ({
   selectedWord,
   round = 1,
   totalRounds = 3,
-  duration = 60,
+  duration = 75,
   remainingTime = 0,
 }) => {
   // Determine game state text
