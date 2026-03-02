@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { CountdownCircleTimer } from "react-countdown-circle-timer";
+import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface WordBarProps {
@@ -12,6 +11,7 @@ interface WordBarProps {
   round?: number;
   totalRounds?: number;
   duration?: number;
+  remainingTime?: number;
 }
 
 const WordBar: React.FC<WordBarProps> = ({
@@ -24,9 +24,8 @@ const WordBar: React.FC<WordBarProps> = ({
   round = 1,
   totalRounds = 3,
   duration = 60,
+  remainingTime = 0,
 }) => {
-  const [timerKey, setTimerKey] = useState(0);
-
   // Determine game state text
   const getStateLabel = () => {
     if (!gameStarted) return null;
@@ -34,6 +33,23 @@ const WordBar: React.FC<WordBarProps> = ({
     if (showWords) return "CHOOSING";
     return "GUESS THIS";
   };
+
+  // Calculate the timer color based on remaining time
+  const getTimerColor = () => {
+    const ratio = remainingTime / duration;
+    if (ratio > 0.66) return "#6d28d9"; // purple
+    if (ratio > 0.33) return "#2563eb"; // blue
+    if (ratio > 0.15) return "#f59e0b"; // amber
+    return "#dc2626"; // red
+  };
+
+  // Calculate SVG circle properties
+  const size = 56;
+  const strokeWidth = 5;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = remainingTime / duration;
+  const strokeDashoffset = circumference * (1 - progress);
 
   // Render the word display (actual word or underscores)
   const renderWordDisplay = () => {
@@ -76,28 +92,40 @@ const WordBar: React.FC<WordBarProps> = ({
     <Card className="backdrop-blur-sm bg-white/95 shadow-lg border-2 border-black/10 py-0">
       <CardContent className="py-3 px-4">
         <div className="flex items-center gap-5">
-          {/* Countdown Timer */}
+          {/* Countdown Timer - Server Synchronized */}
           <div className="shrink-0">
             {showClock ? (
-              <CountdownCircleTimer
-                key={timerKey}
-                isPlaying
-                duration={duration}
-                size={56}
-                strokeWidth={5}
-                colors={["#6d28d9", "#2563eb", "#f59e0b", "#dc2626"]}
-                colorsTime={[duration, duration * 0.66, duration * 0.33, 0]}
-                trailColor="#e5e7eb"
-                onComplete={() => {
-                  setTimerKey((prev) => prev + 1);
-                }}
-              >
-                {({ remainingTime }) => (
+              <div className="relative" style={{ width: size, height: size }}>
+                <svg width={size} height={size} className="transform -rotate-90">
+                  {/* Trail */}
+                  <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="none"
+                    stroke="#e5e7eb"
+                    strokeWidth={strokeWidth}
+                  />
+                  {/* Progress */}
+                  <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="none"
+                    stroke={getTimerColor()}
+                    strokeWidth={strokeWidth}
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    style={{ transition: "stroke-dashoffset 0.5s linear, stroke 0.5s ease" }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-lg font-bold text-foreground font-mono">
                     {remainingTime}
                   </span>
-                )}
-              </CountdownCircleTimer>
+                </div>
+              </div>
             ) : (
               <div className="w-14 h-14 rounded-full border-[5px] border-muted flex items-center justify-center">
                 <span className="text-lg font-bold text-muted-foreground font-mono">

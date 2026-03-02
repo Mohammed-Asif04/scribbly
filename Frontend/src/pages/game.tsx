@@ -50,6 +50,7 @@ const GamePage: React.FC = () => {
   const [allChats, setAllChats] = useState<ChatMessage[]>([]);
   const [round, setRound] = useState(1);
   const [totalRounds, setTotalRounds] = useState(3);
+  const [remainingTime, setRemainingTime] = useState(0);
 
   // Redirect if no username at all
   useEffect(() => {
@@ -186,9 +187,14 @@ const GamePage: React.FC = () => {
       setPlayerDrawing(null);
       setShowClock(false);
       setSelectedWord(null);
+      setRemainingTime(0);
       if (socket.id === player.id) {
         setCurrentUserDrawing(false);
       }
+    });
+
+    socket.on("timer-sync", (time: number) => {
+      setRemainingTime(time);
     });
 
     socket.on("word-len", (wl: number) => {
@@ -204,6 +210,7 @@ const GamePage: React.FC = () => {
       socket.off("start-draw");
       socket.off("end-turn");
       socket.off("word-len");
+      socket.off("timer-sync");
       socket.off("all-guessed-correct");
     };
   }, [socket]);
@@ -332,6 +339,7 @@ const GamePage: React.FC = () => {
           selectedWord={selectedWord}
           round={round}
           totalRounds={totalRounds}
+          remainingTime={remainingTime}
         />
 
         {/* 3-column row: Players | Canvas | Chat */}

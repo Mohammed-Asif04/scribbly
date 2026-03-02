@@ -4,8 +4,23 @@ import { getPlayers } from "./playerController.js";
 let drawerIndex = 0;
 let word = null;
 let timeout = null;
+let timerInterval = null;
+let drawStartTime = null;
+const TURN_DURATION = 60; // seconds
 let round = 0;
 let playerGuessedRightWord = [];
+
+const clearTimers = () => {
+  if (timeout) {
+    clearTimeout(timeout);
+    timeout = null;
+  }
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  drawStartTime = null;
+};
 
 export const startGame = (io) => {
   console.log("Game started");
@@ -17,10 +32,7 @@ export const stopGame = (io) => {
   console.log("Game stopped");
   io.emit("game-stop", {});
   drawerIndex = 0;
-  if (timeout) {
-    clearTimeout(timeout);
-    timeout = null;
-  }
+  clearTimers();
 };
 
 export const startTurn = (io) => {
@@ -39,9 +51,23 @@ export const startDraw = (io) => {
   const players = getPlayers();
   io.emit("start-draw", players[drawerIndex]);
 
-  timeout = setTimeout(() => {
-    endTurn(io);
-  }, 60000);
+  // Track the draw start time for synchronized timer
+  drawStartTime = Date.now();
+
+  // Emit initial timer value
+  io.emit("timer-sync", TURN_DURATION);
+
+  // Broadcast remaining time every second to keep all clients in sync
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - drawStartTime) / 1000);
+    const remaining = Math.max(0, TURN_DURATION - elapsed);
+    io.emit("timer-sync", remaining);
+
+    if (remaining <= 0) {
+      clearTimers();
+      endTurn(io);
+    }
+  }, 1000);
 };
 
 export const endTurn = (io) => {
@@ -49,10 +75,7 @@ export const endTurn = (io) => {
   io.emit("end-turn", { player: players[drawerIndex], word });
 
   playerGuessedRightWord = [];
-  if (timeout) {
-    clearTimeout(timeout);
-    timeout = null;
-  }
+  clearTimers();
 
   // Clear the canvas for all players before the next turn
   io.emit("clear-canvas");
