@@ -181,17 +181,24 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     emitCanvas();
   };
 
-  // Public method to clear canvas after turn (called externally)
+  // Clear canvas when turn changes (new drawer starts)
   useEffect(() => {
+    if (!socket || !context) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    // Expose clearCanvasAfterTurn on the canvas element for parent to call
-    (canvas as any).clearAfterTurn = () => {
-      if (context) {
-        context.clearRect(0, 0, canvas.width, canvas.height);
-      }
+
+    const handleClearCanvas = () => {
+      context.clearRect(0, 0, canvas.width, canvas.height);
     };
-  }, [context]);
+
+    socket.on("clear-canvas", handleClearCanvas);
+    socket.on("start-turn", handleClearCanvas);
+
+    return () => {
+      socket.off("clear-canvas", handleClearCanvas);
+      socket.off("start-turn", handleClearCanvas);
+    };
+  }, [socket, context]);
 
   return (
     <div className="flex flex-col gap-3">

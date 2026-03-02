@@ -54,6 +54,9 @@ export const endTurn = (io) => {
     timeout = null;
   }
 
+  // Clear the canvas for all players before the next turn
+  io.emit("clear-canvas");
+
   // Advance to next drawer
   drawerIndex = (drawerIndex + 1) % players.length;
   startTurn(io);
