@@ -50,7 +50,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       <div className="flex flex-col min-w-0 flex-1">
         <span
           className={cn(
-            "font-semibold text-sm truncate",
+            "font-semibold text-sm",
             curruser ? "text-purple-600" : "text-gray-800"
           )}
         >
