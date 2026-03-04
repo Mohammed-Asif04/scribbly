@@ -83,9 +83,11 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
       const canvas = canvasRef.current;
       if (!canvas) return null;
       const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
       return {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
+        x: (event.clientX - rect.left) * scaleX,
+        y: (event.clientY - rect.top) * scaleY,
       };
     },
     []
@@ -210,13 +212,23 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     setIsPainting(true);
     setMousePosition(coordinates);
     if (context) {
-      // Draw a dot at the start for single-click drawing
-      context.strokeStyle = isEraser ? "#FFFFFF" : color;
-      context.lineWidth = radius;
-      context.beginPath();
-      context.moveTo(coordinates.x, coordinates.y);
-      context.lineTo(coordinates.x, coordinates.y);
-      context.stroke();
+      if (isEraser) {
+        // Erase a full circle on click
+        context.save();
+        context.fillStyle = "#FFFFFF";
+        context.beginPath();
+        context.arc(coordinates.x, coordinates.y, radius, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+      } else {
+        // Draw a dot at the start for single-click drawing
+        context.strokeStyle = color;
+        context.lineWidth = radius;
+        context.beginPath();
+        context.moveTo(coordinates.x, coordinates.y);
+        context.lineTo(coordinates.x, coordinates.y);
+        context.stroke();
+      }
     }
   };
 
@@ -225,14 +237,34 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     const newPos = getCoordinates(event);
     if (!mousePosition || !newPos) return;
 
-    context.strokeStyle = isEraser ? "#FFFFFF" : color;
-    context.lineWidth = radius;
-    context.lineCap = "round";
-    context.lineJoin = "round";
-    context.beginPath();
-    context.moveTo(mousePosition.x, mousePosition.y);
-    context.lineTo(newPos.x, newPos.y);
-    context.stroke();
+    if (isEraser) {
+      // Erase along the path using filled circles for smooth coverage
+      context.save();
+      context.fillStyle = "#FFFFFF";
+      // Draw filled circles along the line from old to new position
+      const dx = newPos.x - mousePosition.x;
+      const dy = newPos.y - mousePosition.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const steps = Math.max(1, Math.ceil(dist / 2));
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const cx = mousePosition.x + dx * t;
+        const cy = mousePosition.y + dy * t;
+        context.beginPath();
+        context.arc(cx, cy, radius, 0, Math.PI * 2);
+        context.fill();
+      }
+      context.restore();
+    } else {
+      context.strokeStyle = color;
+      context.lineWidth = radius;
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(mousePosition.x, mousePosition.y);
+      context.lineTo(newPos.x, newPos.y);
+      context.stroke();
+    }
 
     throttledEmit();
     setMousePosition(newPos);
@@ -291,7 +323,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
           height={480}
           onMouseDown={startPaint}
           onMouseMove={(e) => {
-            // Track cursor position for eraser circle
+            // Track cursor position in CSS pixels for overlay
             const canvas = canvasRef.current;
             if (canvas) {
               const rect = canvas.getBoundingClientRect();
@@ -312,18 +344,24 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
             !currentUserDrawing ? "cursor-not-allowed" : fillMode ? "cursor-pointer" : isEraser ? "cursor-none" : "cursor-crosshair"
           )}
         />
-        {/* Eraser circle cursor */}
-        {isEraser && currentUserDrawing && cursorPos && (
-          <div
-            className="pointer-events-none absolute border-2 border-gray-500 rounded-full"
-            style={{
-              width: radius * 2,
-              height: radius * 2,
-              left: cursorPos.x - radius,
-              top: cursorPos.y - radius,
-            }}
-          />
-        )}
+        {/* Eraser circle cursor - uses CSS-scaled radius */}
+        {isEraser && currentUserDrawing && cursorPos && (() => {
+          const canvas = canvasRef.current;
+          const rect = canvas?.getBoundingClientRect();
+          const cssScale = rect ? rect.width / 680 : 1;
+          const cssRadius = radius * cssScale;
+          return (
+            <div
+              className="pointer-events-none absolute border-2 border-gray-500 rounded-full"
+              style={{
+                width: cssRadius * 2,
+                height: cssRadius * 2,
+                left: cursorPos.x - cssRadius,
+                top: cursorPos.y - cssRadius,
+              }}
+            />
+          );
+        })()}
       </div>
 
       {/* Drawing Tools - only shown when it's the user's turn */}
