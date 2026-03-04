@@ -30,7 +30,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors border border-transparent",
+        "flex items-center gap-2 pl-3 pr-1 py-2 rounded-lg transition-colors border border-transparent relative",
         isDrawing
           ? "bg-purple-100 border-purple-300"
           : "hover:bg-gray-50"
@@ -45,15 +45,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       >
         #{rank}
       </span>
-
-      {/* Avatar */}
-      <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 shrink-0 ring-2 ring-purple-300 ring-offset-1">
-        <img
-          src={pl.avatar}
-          alt={`${pl.name}'s avatar`}
-          className="w-full h-full object-cover"
-        />
-      </div>
 
       {/* Name & Points */}
       <div className="flex flex-col min-w-0 flex-1">
@@ -73,12 +64,21 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         <span className="text-xs text-gray-500">{pl.points} points</span>
       </div>
 
-      {/* Drawing indicator */}
-      {isDrawing && (
-        <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full font-medium shrink-0">
-          ✏️ 
-        </span>
-      )}
+      {/* Avatar + Drawing indicator grouped together */}
+      <div className="flex items-center gap-1 shrink-0 ml-auto">
+        {isDrawing && (
+          <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full font-medium">
+            ✏️
+          </span>
+        )}
+        <div className="w-12 h-12 flex items-center justify-center">
+          <img
+            src={pl.avatar}
+            alt={`${pl.name}'s avatar`}
+            className="w-full h-full object-contain drop-shadow-md"
+          />
+        </div>
+      </div>
     </div>
   );
 };
