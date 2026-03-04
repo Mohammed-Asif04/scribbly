@@ -27,6 +27,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
   const [straightLineMode, setStraightLineMode] = useState(false);
   const [radius, setRadius] = useState(5);
   const [isEraser, setIsEraser] = useState(false);
+  const [fillMode, setFillMode] = useState(false);
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
 
   // Initialize canvas context
@@ -98,45 +99,145 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     socket.emit("sending", dataURL);
   }, [socket]);
 
+  // Throttled emit to avoid encoding PNG on every single mouse move
+  const emitThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const throttledEmit = useCallback(() => {
+    if (emitThrottleRef.current) return; // already scheduled
+    emitThrottleRef.current = setTimeout(() => {
+      emitCanvas();
+      emitThrottleRef.current = null;
+    }, 80);
+  }, [emitCanvas]);
+
+  // --- Flood Fill Algorithm ---
+  const hexToRgb = (hex: string): [number, number, number] => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+      : [0, 0, 0];
+  };
+
+  const colorsMatch = (
+    data: Uint8ClampedArray,
+    idx: number,
+    target: [number, number, number, number],
+    tolerance: number = 32
+  ): boolean => {
+    return (
+      Math.abs(data[idx] - target[0]) <= tolerance &&
+      Math.abs(data[idx + 1] - target[1]) <= tolerance &&
+      Math.abs(data[idx + 2] - target[2]) <= tolerance &&
+      Math.abs(data[idx + 3] - target[3]) <= tolerance
+    );
+  };
+
+  const floodFill = useCallback(
+    (startX: number, startY: number, fillColor: string) => {
+      if (!context) return;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const width = canvas.width;
+      const height = canvas.height;
+      const imageData = context.getImageData(0, 0, width, height);
+      const data = imageData.data;
+
+      const sx = Math.floor(startX);
+      const sy = Math.floor(startY);
+      const startIdx = (sy * width + sx) * 4;
+
+      const targetColor: [number, number, number, number] = [
+        data[startIdx],
+        data[startIdx + 1],
+        data[startIdx + 2],
+        data[startIdx + 3],
+      ];
+
+      const [fr, fg, fb] = hexToRgb(fillColor);
+      const fillRgba: [number, number, number, number] = [fr, fg, fb, 255];
+
+      // Don't fill if clicking on the same color
+      if (
+        Math.abs(targetColor[0] - fillRgba[0]) <= 5 &&
+        Math.abs(targetColor[1] - fillRgba[1]) <= 5 &&
+        Math.abs(targetColor[2] - fillRgba[2]) <= 5 &&
+        Math.abs(targetColor[3] - fillRgba[3]) <= 5
+      ) {
+        return;
+      }
+
+      const stack: [number, number][] = [[sx, sy]];
+      const visited = new Uint8Array(width * height);
+
+      while (stack.length > 0) {
+        const [cx, cy] = stack.pop()!;
+        if (cx < 0 || cx >= width || cy < 0 || cy >= height) continue;
+
+        const pixelIdx = cy * width + cx;
+        if (visited[pixelIdx]) continue;
+        visited[pixelIdx] = 1;
+
+        const idx = pixelIdx * 4;
+        if (!colorsMatch(data, idx, targetColor)) continue;
+
+        data[idx] = fillRgba[0];
+        data[idx + 1] = fillRgba[1];
+        data[idx + 2] = fillRgba[2];
+        data[idx + 3] = fillRgba[3];
+
+        stack.push([cx + 1, cy]);
+        stack.push([cx - 1, cy]);
+        stack.push([cx, cy + 1]);
+        stack.push([cx, cy - 1]);
+      }
+
+      context.putImageData(imageData, 0, 0);
+      emitCanvas();
+    },
+    [context, emitCanvas]
+  );
+
   const startPaint = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!currentUserDrawing) return;
     const coordinates = getCoordinates(event);
-    if (coordinates) {
-      setIsPainting(true);
-      setMousePosition(coordinates);
-      if (straightLineMode) {
-        setStartPoint(coordinates);
-      }
+    if (!coordinates) return;
+
+    // If fill mode, do flood fill at click position
+    if (fillMode) {
+      floodFill(coordinates.x, coordinates.y, color);
+      return;
+    }
+
+    setIsPainting(true);
+    setMousePosition(coordinates);
+    if (straightLineMode) {
+      setStartPoint(coordinates);
+    } else if (context) {
+      // Draw a dot at the start for single-click drawing
+      context.strokeStyle = isEraser ? "#FFFFFF" : color;
+      context.lineWidth = radius;
+      context.beginPath();
+      context.moveTo(coordinates.x, coordinates.y);
+      context.lineTo(coordinates.x, coordinates.y);
+      context.stroke();
     }
   };
 
   const paint = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isPainting || straightLineMode || !context) return;
+    if (!isPainting || straightLineMode || !context || fillMode) return;
     const newPos = getCoordinates(event);
     if (!mousePosition || !newPos) return;
 
-    if (isEraser) {
-      const imageData = context.getImageData(
-        newPos.x - radius,
-        newPos.y - radius,
-        2 * radius,
-        2 * radius
-      );
-      const data = imageData.data;
-      for (let i = 0; i < data.length; i += 4) {
-        data[i + 3] = 0;
-      }
-      context.putImageData(imageData, newPos.x - radius, newPos.y - radius);
-    } else {
-      context.strokeStyle = color;
-      context.lineWidth = radius;
-      context.beginPath();
-      context.moveTo(mousePosition.x, mousePosition.y);
-      context.lineTo(newPos.x, newPos.y);
-      context.stroke();
-    }
+    context.strokeStyle = isEraser ? "#FFFFFF" : color;
+    context.lineWidth = radius;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.beginPath();
+    context.moveTo(mousePosition.x, mousePosition.y);
+    context.lineTo(newPos.x, newPos.y);
+    context.stroke();
 
-    emitCanvas();
+    throttledEmit();
     setMousePosition(newPos);
   };
 
@@ -150,9 +251,14 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
         context.moveTo(startPoint.x, startPoint.y);
         context.lineTo(endPoint.x, endPoint.y);
         context.stroke();
-        emitCanvas();
       }
     }
+    // Always emit final canvas state on mouse up for sync
+    if (emitThrottleRef.current) {
+      clearTimeout(emitThrottleRef.current);
+      emitThrottleRef.current = null;
+    }
+    emitCanvas();
     setIsPainting(false);
     setMousePosition(null);
     setStartPoint(null);
@@ -162,15 +268,6 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     setIsPainting(false);
     setMousePosition(null);
     setStartPoint(null);
-  };
-
-  const fillCanvas = () => {
-    if (!currentUserDrawing || !context) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    context.fillStyle = color;
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    emitCanvas();
   };
 
   const clearCanvas = () => {
@@ -213,7 +310,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
         onMouseLeave={exitPaint}
         className={cn(
           "rounded-lg border-2 border-gray-300 bg-white shadow-inner",
-          !currentUserDrawing ? "cursor-not-allowed" : "cursor-crosshair"
+          !currentUserDrawing ? "cursor-not-allowed" : fillMode ? "cursor-pointer" : "cursor-crosshair"
         )}
       />
 
@@ -258,7 +355,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
                 isEraser && "bg-purple-600 hover:bg-purple-700"
               )}
             >
-              {isEraser ? "✏️ Draw" : "🧹 Eraser"}
+              🧹 Eraser
             </Button>
             <Button
               variant={straightLineMode ? "default" : "outline"}
@@ -269,13 +366,20 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
                 straightLineMode && "bg-purple-600 hover:bg-purple-700"
               )}
             >
-              {straightLineMode ? "📏 Line ON" : "📏 Line"}
+              📏 Line
             </Button>
             <Button
-              variant="outline"
+              variant={fillMode ? "default" : "outline"}
               size="sm"
-              onClick={fillCanvas}
-              className="text-xs font-semibold"
+              onClick={() => {
+                setFillMode(!fillMode);
+                setIsEraser(false);
+                setStraightLineMode(false);
+              }}
+              className={cn(
+                "text-xs font-semibold",
+                fillMode && "bg-purple-600 hover:bg-purple-700"
+              )}
             >
               🎨 Fill
             </Button>
