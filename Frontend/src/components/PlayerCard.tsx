@@ -65,9 +65,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       </div>
 
       {/* Avatar + Drawing indicator grouped together */}
-      <div className="flex items-center gap-1 shrink-0 ml-auto">
+      <div className="flex items-center gap-0 shrink-0 ml-auto">
         {isDrawing && (
-          <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full font-medium">
+          <span className="text-sm">
             ✏️
           </span>
         )}
