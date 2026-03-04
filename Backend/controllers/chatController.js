@@ -4,7 +4,13 @@ import {
   getPlayerGuessedRightWord,
   addPlayerGuessedRight,
   endTurn,
+  getRemainingTime,
+  getTurnDuration,
+  getDrawerId,
 } from "./gameController.js";
+
+const BASE_POINTS = 300;
+const DRAWER_POINTS_PER_GUESS = 50;
 
 export const handleChat = (io, socket, inputMessage) => {
   const players = getPlayers();
@@ -18,9 +24,27 @@ export const handleChat = (io, socket, inputMessage) => {
 
   // Check if the message matches the current word
   if (word && inputMessage && inputMessage.toLowerCase() === word.toLowerCase()) {
+    // Don't allow the drawer to guess their own word
+    const drawerId = getDrawerId();
+    if (userId === drawerId) return;
+
+    // Don't allow duplicate guesses
+    const alreadyGuessed = getPlayerGuessedRightWord();
+    if (alreadyGuessed.includes(userId)) return;
+
     console.log("Right guess by", userId);
     rightGuess = true;
-    addPoints(userId, 100);
+
+    // Guesser score: 300 × (timeRemaining / 75)
+    const remaining = getRemainingTime();
+    const turnDuration = getTurnDuration();
+    const guessScore = Math.round(BASE_POINTS * (remaining / turnDuration));
+    addPoints(userId, Math.max(guessScore, 10)); // minimum 10 points
+
+    // Drawer score: 50 per correct guess
+    if (drawerId) {
+      addPoints(drawerId, DRAWER_POINTS_PER_GUESS);
+    }
   }
 
   const returnObject = {
@@ -34,18 +58,12 @@ export const handleChat = (io, socket, inputMessage) => {
 
   // Handle all-guessed-correct scenario
   if (rightGuess) {
-    const alreadyGuessed = getPlayerGuessedRightWord().filter(
-      (pId) => pId === userId
-    );
+    addPlayerGuessedRight(userId);
 
-    if (alreadyGuessed.length === 0) {
-      addPlayerGuessedRight(userId);
-
-      // If all non-drawing players guessed correctly, end the turn
-      if (getPlayerGuessedRightWord().length === players.length - 1) {
-        io.emit("all-guessed-correct", {});
-        endTurn(io);
-      }
+    // If all non-drawing players guessed correctly, end the turn
+    if (getPlayerGuessedRightWord().length === players.length - 1) {
+      io.emit("all-guessed-correct", {});
+      endTurn(io);
     }
   }
 };

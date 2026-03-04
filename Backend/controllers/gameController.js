@@ -126,3 +126,17 @@ export const addPlayerGuessedRight = (playerId) => {
 export const resetPlayerGuessedRight = () => {
   playerGuessedRightWord = [];
 };
+
+export const getRemainingTime = () => {
+  if (!drawStartTime) return 0;
+  const elapsed = Math.floor((Date.now() - drawStartTime) / 1000);
+  return Math.max(0, TURN_DURATION - elapsed);
+};
+
+export const getTurnDuration = () => TURN_DURATION;
+
+export const getDrawerId = () => {
+  const players = getPlayers();
+  if (players.length === 0 || drawerIndex >= players.length) return null;
+  return players[drawerIndex].id;
+};
