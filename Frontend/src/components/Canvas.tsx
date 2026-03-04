@@ -23,12 +23,11 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
   const [isPainting, setIsPainting] = useState(false);
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
   const [color, setColor] = useState("#000000");
-  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
-  const [straightLineMode, setStraightLineMode] = useState(false);
   const [radius, setRadius] = useState(5);
   const [isEraser, setIsEraser] = useState(false);
   const [fillMode, setFillMode] = useState(false);
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
   // Initialize canvas context
   useEffect(() => {
@@ -210,9 +209,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
 
     setIsPainting(true);
     setMousePosition(coordinates);
-    if (straightLineMode) {
-      setStartPoint(coordinates);
-    } else if (context) {
+    if (context) {
       // Draw a dot at the start for single-click drawing
       context.strokeStyle = isEraser ? "#FFFFFF" : color;
       context.lineWidth = radius;
@@ -224,7 +221,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
   };
 
   const paint = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isPainting || straightLineMode || !context || fillMode) return;
+    if (!isPainting || !context || fillMode) return;
     const newPos = getCoordinates(event);
     if (!mousePosition || !newPos) return;
 
@@ -241,18 +238,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     setMousePosition(newPos);
   };
 
-  const handleMouseUp = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (straightLineMode && startPoint && context) {
-      const endPoint = getCoordinates(event);
-      if (endPoint) {
-        context.strokeStyle = color;
-        context.lineWidth = radius;
-        context.beginPath();
-        context.moveTo(startPoint.x, startPoint.y);
-        context.lineTo(endPoint.x, endPoint.y);
-        context.stroke();
-      }
-    }
+  const handleMouseUp = () => {
     // Always emit final canvas state on mouse up for sync
     if (emitThrottleRef.current) {
       clearTimeout(emitThrottleRef.current);
@@ -261,13 +247,11 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     emitCanvas();
     setIsPainting(false);
     setMousePosition(null);
-    setStartPoint(null);
   };
 
   const exitPaint = () => {
     setIsPainting(false);
     setMousePosition(null);
-    setStartPoint(null);
   };
 
   const clearCanvas = () => {
@@ -299,20 +283,48 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Canvas */}
-      <canvas
-        ref={canvasRef}
-        width={680}
-        height={480}
-        onMouseDown={startPaint}
-        onMouseMove={paint}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={exitPaint}
-        className={cn(
-          "rounded-lg border-2 border-gray-300 bg-white shadow-inner",
-          !currentUserDrawing ? "cursor-not-allowed" : fillMode ? "cursor-pointer" : "cursor-crosshair"
+      {/* Canvas with cursor overlay */}
+      <div className="relative">
+        <canvas
+          ref={canvasRef}
+          width={680}
+          height={480}
+          onMouseDown={startPaint}
+          onMouseMove={(e) => {
+            // Track cursor position for eraser circle
+            const canvas = canvasRef.current;
+            if (canvas) {
+              const rect = canvas.getBoundingClientRect();
+              setCursorPos({
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
+              });
+            }
+            paint(e);
+          }}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={() => {
+            exitPaint();
+            setCursorPos(null);
+          }}
+          className={cn(
+            "rounded-lg border-2 border-gray-300 bg-white shadow-inner",
+            !currentUserDrawing ? "cursor-not-allowed" : fillMode ? "cursor-pointer" : isEraser ? "cursor-none" : "cursor-crosshair"
+          )}
+        />
+        {/* Eraser circle cursor */}
+        {isEraser && currentUserDrawing && cursorPos && (
+          <div
+            className="pointer-events-none absolute border-2 border-gray-500 rounded-full"
+            style={{
+              width: radius * 2,
+              height: radius * 2,
+              left: cursorPos.x - radius,
+              top: cursorPos.y - radius,
+            }}
+          />
         )}
-      />
+      </div>
 
       {/* Drawing Tools - only shown when it's the user's turn */}
       {currentUserDrawing && (
@@ -347,9 +359,26 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
           {/* Tool Buttons + Radius */}
           <div className="flex items-center gap-2 flex-wrap">
             <Button
+              variant={!isEraser && !fillMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setIsEraser(false);
+                setFillMode(false);
+              }}
+              className={cn(
+                "text-xs font-semibold",
+                !isEraser && !fillMode && "bg-purple-600 hover:bg-purple-700"
+              )}
+            >
+              ✏️ Draw
+            </Button>
+            <Button
               variant={isEraser ? "default" : "outline"}
               size="sm"
-              onClick={() => setIsEraser(!isEraser)}
+              onClick={() => {
+                setIsEraser(true);
+                setFillMode(false);
+              }}
               className={cn(
                 "text-xs font-semibold",
                 isEraser && "bg-purple-600 hover:bg-purple-700"
@@ -358,23 +387,11 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
               🧹 Eraser
             </Button>
             <Button
-              variant={straightLineMode ? "default" : "outline"}
-              size="sm"
-              onClick={() => setStraightLineMode(!straightLineMode)}
-              className={cn(
-                "text-xs font-semibold",
-                straightLineMode && "bg-purple-600 hover:bg-purple-700"
-              )}
-            >
-              📏 Line
-            </Button>
-            <Button
               variant={fillMode ? "default" : "outline"}
               size="sm"
               onClick={() => {
                 setFillMode(!fillMode);
                 setIsEraser(false);
-                setStraightLineMode(false);
               }}
               className={cn(
                 "text-xs font-semibold",
