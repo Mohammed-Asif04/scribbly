@@ -73,10 +73,41 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     };
 
     socket.on("receiving", handleReceiving);
+
+    // Drawer: respond to canvas sync requests from mid-game joiners
+    const handleCanvasSyncRequest = ({ targetId }: { targetId: string }) => {
+      if (!currentUserDrawing) return;
+      const c = canvasRef.current;
+      if (!c) return;
+      const dataURL = c.toDataURL("image/png");
+      socket.emit("canvas-sync-response", { targetId, data: dataURL });
+    };
+    socket.on("request-canvas-sync", handleCanvasSyncRequest);
+
+    // Joiner: receive a canvas snapshot from the drawer
+    const handleCanvasSync = (data: string) => {
+      const c = canvasRef.current;
+      if (!c) return;
+      const base64String = data.split(",")[1];
+      const byteArray = Uint8Array.from(atob(base64String), (ch) => ch.charCodeAt(0));
+      const blob = new Blob([byteArray], { type: "image/png" });
+      const imageUrl = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        context.clearRect(0, 0, c.width, c.height);
+        context.drawImage(img, 0, 0);
+        URL.revokeObjectURL(imageUrl);
+      };
+      img.src = imageUrl;
+    };
+    socket.on("canvas-sync", handleCanvasSync);
+
     return () => {
       socket.off("receiving", handleReceiving);
+      socket.off("request-canvas-sync", handleCanvasSyncRequest);
+      socket.off("canvas-sync", handleCanvasSync);
     };
-  }, [socket, context]);
+  }, [socket, context, currentUserDrawing]);
 
   const getCoordinates = useCallback(
     (event: React.MouseEvent<HTMLCanvasElement>): { x: number; y: number } | null => {

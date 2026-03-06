@@ -12,6 +12,8 @@ import {
   stopGame,
   handleWordSelect,
   isGameInProgress,
+  getGameState,
+  getDrawerId,
 } from "./controllers/gameController.js";
 import { handleChat } from "./controllers/chatController.js";
 
@@ -42,6 +44,14 @@ io.on("connection", (socket) => {
       io.to(socket.id).emit("waiting-for-round", {
         message: "A round is in progress. You'll join when the current turn ends!",
       });
+      // Send current game state so spectator can see drawing + word hints
+      const gameState = getGameState();
+      io.to(socket.id).emit("game-state-sync", gameState);
+      // Ask the drawer to send their current canvas to the new joiner
+      const drawerId = getDrawerId();
+      if (drawerId) {
+        io.to(drawerId).emit("request-canvas-sync", { targetId: socket.id });
+      }
       io.emit("updated-players", getPlayers());
     }
     if (players.length >= 2) {
@@ -57,6 +67,11 @@ io.on("connection", (socket) => {
   // Chat messages
   socket.on("sending-chat", (inputMessage) => {
     handleChat(io, socket, inputMessage);
+  });
+
+  // Canvas sync response: drawer sends canvas data for a specific joiner
+  socket.on("canvas-sync-response", ({ targetId, data }) => {
+    io.to(targetId).emit("canvas-sync", data);
   });
 
   // Word selection by drawer

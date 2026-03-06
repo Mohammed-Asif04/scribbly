@@ -148,3 +148,17 @@ export const getDrawerId = () => {
 };
 
 export const isGameInProgress = () => drawStartTime !== null;
+
+export const getGameState = () => {
+  const players = getPlayers();
+  const drawerPlayer = players.length > 0 && drawerIndex < players.length
+    ? players[drawerIndex]
+    : null;
+  return {
+    drawerPlayer,
+    wordLength: word ? word.length : 0,
+    remainingTime: getRemainingTime(),
+    round,
+    totalRounds: TOTAL_ROUNDS,
+  };
+};

@@ -163,9 +163,12 @@ const WordBar: React.FC<WordBarProps> = ({
           {/* Game State + Word Display */}
           <div className="flex-1 flex flex-col items-center justify-center min-w-0">
             {isWaiting ? (
-              <span className="text-sm font-semibold text-amber-600 tracking-wide uppercase animate-pulse">
-                ⏳ Waiting for current turn to finish…
-              </span>
+              <>
+                <span className="text-[11px] font-semibold text-amber-600 uppercase tracking-widest mb-0.5 animate-pulse">
+                  SPECTATING
+                </span>
+                {renderWordDisplay()}
+              </>
             ) : !gameStarted ? (
               <span className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">
                 ⏳ Waiting for game to start…

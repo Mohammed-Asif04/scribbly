@@ -170,6 +170,22 @@ const GamePage: React.FC = () => {
       setIsWaiting(false);
     });
 
+    // Sync current game state for mid-game joiners (spectators)
+    socket.on("game-state-sync", ({ drawerPlayer, wordLength, remainingTime: rt, round: r, totalRounds: tr }: {
+      drawerPlayer: Player | null;
+      wordLength: number;
+      remainingTime: number;
+      round: number;
+      totalRounds: number;
+    }) => {
+      if (drawerPlayer) setPlayerDrawing(drawerPlayer);
+      if (wordLength > 0) setWordLen(wordLength);
+      setRemainingTime(rt);
+      setRound(r);
+      setTotalRounds(tr);
+      if (wordLength > 0) setShowClock(true);
+    });
+
     return () => {
       socket.off("game-start");
       socket.off("game-already-started");
@@ -178,6 +194,7 @@ const GamePage: React.FC = () => {
       socket.off("game-over");
       socket.off("waiting-for-round");
       socket.off("waiting-players-activated");
+      socket.off("game-state-sync");
     };
   }, [socket]);
 
