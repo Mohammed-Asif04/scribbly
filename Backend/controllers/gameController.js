@@ -157,6 +157,7 @@ export const getGameState = () => {
   return {
     drawerPlayer,
     wordLength: word ? word.length : 0,
+    word: word || null,
     remainingTime: getRemainingTime(),
     round,
     totalRounds: TOTAL_ROUNDS,

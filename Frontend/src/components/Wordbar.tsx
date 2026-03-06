@@ -68,6 +68,17 @@ const WordBar: React.FC<WordBarProps> = ({
       );
     }
 
+    // Spectator: show the actual word to waiting players
+    if (isWaiting && selectedWord) {
+      return (
+        <div className="flex items-baseline gap-1">
+          <span className="font-mono text-2xl font-bold tracking-[0.3em] text-amber-600 uppercase">
+            {selectedWord}
+          </span>
+        </div>
+      );
+    }
+
     // Choosing: show nothing for the word
     if (showWords) return null;
 

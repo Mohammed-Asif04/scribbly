@@ -171,15 +171,17 @@ const GamePage: React.FC = () => {
     });
 
     // Sync current game state for mid-game joiners (spectators)
-    socket.on("game-state-sync", ({ drawerPlayer, wordLength, remainingTime: rt, round: r, totalRounds: tr }: {
+    socket.on("game-state-sync", ({ drawerPlayer, wordLength, word, remainingTime: rt, round: r, totalRounds: tr }: {
       drawerPlayer: Player | null;
       wordLength: number;
+      word: string | null;
       remainingTime: number;
       round: number;
       totalRounds: number;
     }) => {
       if (drawerPlayer) setPlayerDrawing(drawerPlayer);
       if (wordLength > 0) setWordLen(wordLength);
+      if (word) setSelectedWord(word);
       setRemainingTime(rt);
       setRound(r);
       setTotalRounds(tr);
