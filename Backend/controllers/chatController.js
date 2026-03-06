@@ -1,4 +1,4 @@
-import { getPlayers, getPlayerById, addPoints } from "./playerController.js";
+import { getPlayers, getPlayerById, addPoints, getWaitingPlayers } from "./playerController.js";
 import {
   getCurrentWord,
   getPlayerGuessedRightWord,
@@ -60,8 +60,8 @@ export const handleChat = (io, socket, inputMessage) => {
   if (rightGuess) {
     addPlayerGuessedRight(userId);
 
-    // If all non-drawing players guessed correctly, end the turn
-    if (getPlayerGuessedRightWord().length === players.length - 1) {
+    // If all non-drawing, non-spectator players guessed correctly, end the turn
+    if (getPlayerGuessedRightWord().length === players.length - 1 - getWaitingPlayers().length) {
       io.emit("all-guessed-correct", {});
       endTurn(io);
     }
