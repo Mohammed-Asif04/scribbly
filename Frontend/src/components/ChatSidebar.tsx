@@ -32,7 +32,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   return (
-    <Card className="w-64 shrink-0 backdrop-blur-sm bg-white/90 shadow-lg self-stretch flex flex-col">
+    <Card className="w-64 shrink-0 backdrop-blur-sm bg-white/90 shadow-lg self-stretch flex flex-col overflow-hidden">
       <CardHeader className="pb-2 px-3 pt-4">
         <CardTitle className="text-base text-purple-600 text-center">
           Chat

@@ -414,7 +414,7 @@ const GamePage: React.FC = () => {
         />
 
         {/* 3-column row: Players | Canvas | Chat */}
-        <div className="flex gap-4 items-stretch">
+        <div className="flex gap-4 items-stretch h-[540px]">
           {/* Player List Sidebar */}
           <Card className="w-56 shrink-0 backdrop-blur-sm bg-white/90 shadow-lg self-start transition-all duration-300">
             <CardHeader className="pb-2 px-3 pt-4">
@@ -443,7 +443,7 @@ const GamePage: React.FC = () => {
           </Card>
 
           {/* Canvas */}
-          <Card className="backdrop-blur-sm bg-white/90 shadow-lg flex-1z">
+          <Card className="backdrop-blur-sm bg-white/90 shadow-lg flex-1">
             <CardContent className="p-3">
               <Canvas
                 socket={socket}
