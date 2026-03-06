@@ -113,15 +113,15 @@ const GamePage: React.FC = () => {
     if (!socket) return;
     socket.on("player-joined", ({ name }: { name: string }) => {
       setAllChats((prev) => [
-        { sender: "", message: `${name} joined the match`, rightGuess: false, system: true, type: "join" },
+        { sender: "", message: `${name} joined the match`, rightGuess: false, system: true, type: "join" as const },
         ...prev,
-      ]);
+      ].slice(0, 20));
     });
     socket.on("player-left", ({ name }: { name: string }) => {
       setAllChats((prev) => [
-        { sender: "", message: `${name} left the match`, rightGuess: false, system: true, type: "leave" },
+        { sender: "", message: `${name} left the match`, rightGuess: false, system: true, type: "leave" as const },
         ...prev,
-      ]);
+      ].slice(0, 20));
     });
     return () => {
       socket.off("player-joined");
@@ -220,18 +220,18 @@ const GamePage: React.FC = () => {
       }
       // System message: "X is drawing now!"
       setAllChats((prev) => [
-        { sender: "", message: `${player.name} is drawing now!`, rightGuess: false, system: true, type: "drawing" },
+        { sender: "", message: `${player.name} is drawing now!`, rightGuess: false, system: true, type: "drawing" as const },
         ...prev,
-      ]);
+      ].slice(0, 20));
     });
 
     socket.on("end-turn", ({ player, word: correctWord }: { player: Player; word: string }) => {
       // System message: "The word was 'X'"
       if (correctWord) {
         setAllChats((prev) => [
-          { sender: "", message: `The word was '${correctWord}'`, rightGuess: false, system: true, type: "word-reveal" },
+          { sender: "", message: `The word was '${correctWord}'`, rightGuess: false, system: true, type: "word-reveal" as const },
           ...prev,
-        ]);
+        ].slice(0, 20));
       }
       setGuessedWord(false);
       setPlayerDrawing(null);
@@ -280,26 +280,26 @@ const GamePage: React.FC = () => {
         if (player.id === socket.id) {
           setGuessedWord(true);
           setAllChats((prev) => [
-            { sender: player.name, message: `${player.name} guessed the word!`, rightGuess, type: "right-guess" },
+            { sender: player.name, message: `${player.name} guessed the word!`, rightGuess, type: "right-guess" as const },
             ...prev,
-          ]);
+          ].slice(0, 20));
         } else {
           setAllChats((prev) => [
-            { sender: player.name, message: `${player.name} guessed the word!`, rightGuess, type: "right-guess" },
+            { sender: player.name, message: `${player.name} guessed the word!`, rightGuess, type: "right-guess" as const },
             ...prev,
-          ]);
+          ].slice(0, 20));
         }
       } else {
         if (player.id === socket.id) {
           setAllChats((prev) => [
             { sender: player.name, message: msg, rightGuess },
             ...prev,
-          ]);
+          ].slice(0, 20));
         } else {
           setAllChats((prev) => [
             { sender: player.name, message: msg, rightGuess },
             ...prev,
-          ]);
+          ].slice(0, 20));
         }
       }
     });

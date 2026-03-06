@@ -40,7 +40,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       </CardHeader>
       <CardContent className="px-2 pb-2 flex flex-col flex-1 overflow-hidden">
         {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto flex flex-col-reverse gap-1 mb-2">
+        <div className="flex-1 overflow-hidden flex flex-col-reverse gap-1 mb-2">
           {allChats.map((chat, idx) => (
             <div
               key={idx}
