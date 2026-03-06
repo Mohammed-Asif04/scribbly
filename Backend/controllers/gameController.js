@@ -1,4 +1,4 @@
-import { getPlayers } from "./playerController.js";
+import { getPlayers, activateWaitingPlayers } from "./playerController.js";
 
 // Game state
 let drawerIndex = 0;
@@ -88,6 +88,12 @@ export const endTurn = (io) => {
   // Clear the canvas for all players before the next turn
   io.emit("clear-canvas");
 
+  // Activate any waiting (spectator) players so they join the next turn
+  activateWaitingPlayers();
+  io.emit("waiting-players-activated");
+  // Send updated player list (isWaiting is now false for everyone)
+  io.emit("updated-players", getPlayers());
+
   // Advance to next drawer
   const nextDrawerIndex = (drawerIndex + 1) % players.length;
 
@@ -140,3 +146,5 @@ export const getDrawerId = () => {
   if (players.length === 0 || drawerIndex >= players.length) return null;
   return players[drawerIndex].id;
 };
+
+export const isGameInProgress = () => drawStartTime !== null;

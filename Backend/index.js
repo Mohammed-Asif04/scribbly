@@ -5,11 +5,13 @@ import {
   removePlayer,
   getPlayers,
   getPlayerById,
+  setPlayerWaiting,
 } from "./controllers/playerController.js";
 import {
   startGame,
   stopGame,
   handleWordSelect,
+  isGameInProgress,
 } from "./controllers/gameController.js";
 import { handleChat } from "./controllers/chatController.js";
 
@@ -34,6 +36,13 @@ io.on("connection", (socket) => {
 
     if (players.length === 2) {
       startGame(io);
+    } else if (players.length > 2 && isGameInProgress()) {
+      // Mid-game joiner: mark as waiting spectator
+      setPlayerWaiting(socket.id, true);
+      io.to(socket.id).emit("waiting-for-round", {
+        message: "A round is in progress. You'll join when the current turn ends!",
+      });
+      io.emit("updated-players", getPlayers());
     }
     if (players.length >= 2) {
       io.emit("game-already-started", {});

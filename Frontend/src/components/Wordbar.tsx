@@ -12,6 +12,7 @@ interface WordBarProps {
   totalRounds?: number;
   duration?: number;
   remainingTime?: number;
+  isWaiting?: boolean;
 }
 
 const WordBar: React.FC<WordBarProps> = ({
@@ -25,6 +26,7 @@ const WordBar: React.FC<WordBarProps> = ({
   totalRounds = 3,
   duration = 75,
   remainingTime = 0,
+  isWaiting = false,
 }) => {
   // Determine game state text
   const getStateLabel = () => {
@@ -160,7 +162,11 @@ const WordBar: React.FC<WordBarProps> = ({
 
           {/* Game State + Word Display */}
           <div className="flex-1 flex flex-col items-center justify-center min-w-0">
-            {!gameStarted ? (
+            {isWaiting ? (
+              <span className="text-sm font-semibold text-amber-600 tracking-wide uppercase animate-pulse">
+                ⏳ Waiting for current turn to finish…
+              </span>
+            ) : !gameStarted ? (
               <span className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">
                 ⏳ Waiting for game to start…
               </span>

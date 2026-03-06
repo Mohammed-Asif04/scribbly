@@ -10,6 +10,8 @@ import GameOver from "@/components/GameOver";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { wordsArray, getWordsArrayLength } from "@/components/word";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Clock } from "lucide-react";
 
 interface Player {
   id: string;
@@ -53,6 +55,7 @@ const GamePage: React.FC = () => {
   const [totalRounds, setTotalRounds] = useState(3);
   const [remainingTime, setRemainingTime] = useState(0);
   const [gameOverData, setGameOverData] = useState<{ players: Player[] } | null>(null);
+  const [isWaiting, setIsWaiting] = useState(false);
 
   // Redirect if no username at all
   useEffect(() => {
@@ -145,6 +148,7 @@ const GamePage: React.FC = () => {
       setShowClock(false);
       setCurrentUserDrawing(false);
       setPlayerDrawing(null);
+      setIsWaiting(false);
     });
 
     socket.on("round-update", ({ round: r, totalRounds: tr }: { round: number; totalRounds: number }) => {
@@ -156,12 +160,24 @@ const GamePage: React.FC = () => {
       setGameOverData({ players });
     });
 
+    // Mid-game join: server tells us to wait
+    socket.on("waiting-for-round", () => {
+      setIsWaiting(true);
+    });
+
+    // Server activated waiting players — we can now play
+    socket.on("waiting-players-activated", () => {
+      setIsWaiting(false);
+    });
+
     return () => {
       socket.off("game-start");
       socket.off("game-already-started");
       socket.off("game-stop");
       socket.off("round-update");
       socket.off("game-over");
+      socket.off("waiting-for-round");
+      socket.off("waiting-players-activated");
     };
   }, [socket]);
 
@@ -353,6 +369,17 @@ const GamePage: React.FC = () => {
       )}
 
       <div className="relative z-10 flex flex-col gap-3 w-full max-w-6xl">
+        {/* Waiting Banner for mid-game joiners */}
+        {isWaiting && (
+          <Alert className="border-amber-300 bg-amber-50/95 backdrop-blur-sm shadow-lg animate-pulse">
+            <Clock className="h-5 w-5 text-amber-600" />
+            <AlertTitle className="text-amber-800 font-bold">Waiting to join</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              A round is in progress. You'll join the game when the current turn ends!
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Word Bar - full width above the 3-column row */}
         <WordBar
           showClock={showClock}
@@ -364,6 +391,7 @@ const GamePage: React.FC = () => {
           round={round}
           totalRounds={totalRounds}
           remainingTime={remainingTime}
+          isWaiting={isWaiting}
         />
 
         {/* 3-column row: Players | Canvas | Chat */}
@@ -411,8 +439,8 @@ const GamePage: React.FC = () => {
             inputMessage={inputMessage}
             setInputMessage={setInputMessage}
             onSubmitChat={handleSubmitChat}
-            disabled={currentUserDrawing || showWords || !gameStarted || guessedWord}
-            sendDisabled={currentUserDrawing || showWords || !gameStarted || guessedWord || !inputMessage.trim()}
+            disabled={currentUserDrawing || showWords || !gameStarted || guessedWord || isWaiting}
+            sendDisabled={currentUserDrawing || showWords || !gameStarted || guessedWord || isWaiting || !inputMessage.trim()}
           />
         </div>
       </div>

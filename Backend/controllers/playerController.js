@@ -7,6 +7,7 @@ export const addPlayer = (id, name, avatar) => {
     name,
     points: 0,
     avatar,
+    isWaiting: false,
   };
   players.push(newPlayer);
   return newPlayer;
@@ -28,4 +29,21 @@ export const addPoints = (id, points) => {
   if (player) {
     player.points += points;
   }
+};
+
+export const setPlayerWaiting = (id, val) => {
+  const player = getPlayerById(id);
+  if (player) {
+    player.isWaiting = val;
+  }
+};
+
+export const getWaitingPlayers = () => players.filter((p) => p.isWaiting);
+
+export const activateWaitingPlayers = () => {
+  players.forEach((p) => {
+    if (p.isWaiting) {
+      p.isWaiting = false;
+    }
+  });
 };
