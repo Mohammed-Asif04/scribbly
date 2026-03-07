@@ -57,16 +57,15 @@ const GamePage: React.FC = () => {
   const [gameOverData, setGameOverData] = useState<{ players: Player[] } | null>(null);
   const [isWaiting, setIsWaiting] = useState(false);
 
-  // Redirect if no username at all
+  // Redirect to landing if no username exists
   useEffect(() => {
     const storedUsername = localStorage.getItem("username");
-    // Only redirect if we have NO username from any source
     if (!storedUsername && !username) {
       navigate("/");
     }
   }, []);
 
-  // Connect to socket
+  // Socket connection lifecycle
   useEffect(() => {
     try {
       const newSocket = io(ENDPOINT_LOCAL);
@@ -87,7 +86,7 @@ const GamePage: React.FC = () => {
     }
   }, []);
 
-  // Send user data when server asks
+  // Send user data when server requests it
   useEffect(() => {
     if (!socket) return;
     socket.on("send-user-data", () => {
@@ -99,7 +98,7 @@ const GamePage: React.FC = () => {
     return () => { socket.off("send-user-data"); };
   }, [socket, username, avatar]);
 
-  // Listen for updated player list
+  // Player list updates
   useEffect(() => {
     if (!socket) return;
     socket.on("updated-players", (updatedPlayers: Player[]) => {
@@ -108,7 +107,7 @@ const GamePage: React.FC = () => {
     return () => { socket.off("updated-players"); };
   }, [socket]);
 
-  // Listen for player join/leave events
+  // Player join/leave chat notifications
   useEffect(() => {
     if (!socket) return;
     socket.on("player-joined", ({ name }: { name: string }) => {
@@ -129,7 +128,7 @@ const GamePage: React.FC = () => {
     };
   }, [socket]);
 
-  // Game start/stop events
+  // Game lifecycle events (start, stop, rounds, spectator sync)
   useEffect(() => {
     if (!socket) return;
 
@@ -160,17 +159,15 @@ const GamePage: React.FC = () => {
       setGameOverData({ players });
     });
 
-    // Mid-game join: server tells us to wait
     socket.on("waiting-for-round", () => {
       setIsWaiting(true);
     });
 
-    // Server activated waiting players — we can now play
     socket.on("waiting-players-activated", () => {
       setIsWaiting(false);
     });
 
-    // Sync current game state for mid-game joiners (spectators)
+    // Sync full game state for mid-game joiners
     socket.on("game-state-sync", ({ drawerPlayer, wordLength, word, remainingTime: rt, round: r, totalRounds: tr }: {
       drawerPlayer: Player | null;
       wordLength: number;
@@ -200,7 +197,7 @@ const GamePage: React.FC = () => {
     };
   }, [socket]);
 
-  // Turn events
+  // Turn events (start, draw, end, timer)
   useEffect(() => {
     if (!socket) return;
 
@@ -218,7 +215,6 @@ const GamePage: React.FC = () => {
       if (player.id === socket.id) {
         setCurrentUserDrawing(true);
       }
-      // System message: "X is drawing now!"
       setAllChats((prev) => [
         { sender: "", message: `${player.name} is drawing now!`, rightGuess: false, system: true, type: "drawing" as const },
         ...prev,
@@ -226,7 +222,6 @@ const GamePage: React.FC = () => {
     });
 
     socket.on("end-turn", ({ player, word: correctWord }: { player: Player; word: string }) => {
-      // System message: "The word was 'X'"
       if (correctWord) {
         setAllChats((prev) => [
           { sender: "", message: `The word was '${correctWord}'`, rightGuess: false, system: true, type: "word-reveal" as const },
@@ -251,9 +246,7 @@ const GamePage: React.FC = () => {
       setWordLen(wl);
     });
 
-    socket.on("all-guessed-correct", () => {
-      // All players guessed correctly
-    });
+    socket.on("all-guessed-correct", () => {});
 
     return () => {
       socket.off("start-turn");
@@ -265,7 +258,7 @@ const GamePage: React.FC = () => {
     };
   }, [socket]);
 
-  // Chat events
+  // Chat message handling
   useEffect(() => {
     if (!socket) return;
 
@@ -307,7 +300,6 @@ const GamePage: React.FC = () => {
     return () => { socket.off("recieve-chat"); };
   }, [socket]);
 
-  // Word selection
   const handleWordSelect = (w: string) => {
     setShowWords(false);
     setSelectedWord(w);
@@ -315,7 +307,6 @@ const GamePage: React.FC = () => {
     setWords([]);
   };
 
-  // Chat submit
   const handleSubmitChat = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim()) return;
@@ -323,7 +314,7 @@ const GamePage: React.FC = () => {
     setInputMessage("");
   };
 
-  // Get random words
+  // Pick 3 unique random words from the word bank
   const getRandomWords = (): string[] => {
     const lengthWordArray = getWordsArrayLength();
     const newWordsArray: string[] = [];
@@ -345,7 +336,6 @@ const GamePage: React.FC = () => {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <Background />
 
-      {/* Word Selection Overlay */}
       {/* Game Over Overlay */}
       {gameOverData && (
         <GameOver
@@ -355,6 +345,7 @@ const GamePage: React.FC = () => {
         />
       )}
 
+      {/* Word Selection Overlay */}
       {showWords && playerDrawing && socket && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <Card className="bg-white/95 shadow-2xl">
@@ -388,7 +379,7 @@ const GamePage: React.FC = () => {
       )}
 
       <div className="relative z-10 flex flex-col gap-3 w-full max-w-6xl">
-        {/* Waiting Banner for mid-game joiners */}
+        {/* Waiting Banner */}
         {isWaiting && (
           <Alert className="border-amber-300 bg-amber-50/95 backdrop-blur-sm shadow-lg animate-pulse">
             <Clock className="h-5 w-5 text-amber-600" />
@@ -399,7 +390,7 @@ const GamePage: React.FC = () => {
           </Alert>
         )}
 
-        {/* Word Bar - full width above the 3-column row */}
+        {/* Word Bar */}
         <WordBar
           showClock={showClock}
           wordLen={wordLen}
@@ -413,9 +404,9 @@ const GamePage: React.FC = () => {
           isWaiting={isWaiting}
         />
 
-        {/* 3-column row: Players | Canvas | Chat */}
+        {/* Players | Canvas | Chat */}
         <div className="flex gap-4 items-stretch h-[540px]">
-          {/* Player List Sidebar */}
+          {/* Player List */}
           <Card className="w-56 shrink-0 backdrop-blur-sm bg-white/90 shadow-lg self-start transition-all duration-300">
             <CardHeader className="pb-2 px-3 pt-4">
               <CardTitle className="text-base text-purple-600 text-center">
@@ -452,7 +443,7 @@ const GamePage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Chat Sidebar */}
+          {/* Chat */}
           <ChatSidebar
             allChats={allChats}
             inputMessage={inputMessage}

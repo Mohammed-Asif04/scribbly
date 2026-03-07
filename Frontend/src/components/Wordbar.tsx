@@ -28,7 +28,6 @@ const WordBar: React.FC<WordBarProps> = ({
   remainingTime = 0,
   isWaiting = false,
 }) => {
-  // Determine game state text
   const getStateLabel = () => {
     if (!gameStarted) return null;
     if (currentUserDrawing && selectedWord) return "DRAW";
@@ -36,16 +35,16 @@ const WordBar: React.FC<WordBarProps> = ({
     return "GUESS THIS";
   };
 
-  // Calculate the timer color based on remaining time
+  // Timer color transitions: purple → blue → amber → red
   const getTimerColor = () => {
     const ratio = remainingTime / duration;
-    if (ratio > 0.66) return "#6d28d9"; // purple
-    if (ratio > 0.33) return "#2563eb"; // blue
-    if (ratio > 0.15) return "#f59e0b"; // amber
-    return "#dc2626"; // red
+    if (ratio > 0.66) return "#6d28d9";
+    if (ratio > 0.33) return "#2563eb";
+    if (ratio > 0.15) return "#f59e0b";
+    return "#dc2626";
   };
 
-  // Calculate SVG circle properties
+  // SVG circle timer properties
   const size = 56;
   const strokeWidth = 5;
   const radius = (size - strokeWidth) / 2;
@@ -53,11 +52,10 @@ const WordBar: React.FC<WordBarProps> = ({
   const progress = remainingTime / duration;
   const strokeDashoffset = circumference * (1 - progress);
 
-  // Render the word display (actual word or underscores)
+  // Show actual word for drawer/spectator, underscores for guessers
   const renderWordDisplay = () => {
     if (!gameStarted) return null;
 
-    // Drawing: show the actual word
     if (currentUserDrawing && selectedWord) {
       return (
         <div className="flex items-baseline gap-1">
@@ -68,7 +66,6 @@ const WordBar: React.FC<WordBarProps> = ({
       );
     }
 
-    // Spectator: show the actual word to waiting players
     if (isWaiting && selectedWord) {
       return (
         <div className="flex items-baseline gap-1">
@@ -79,10 +76,8 @@ const WordBar: React.FC<WordBarProps> = ({
       );
     }
 
-    // Choosing: show nothing for the word
     if (showWords) return null;
 
-    // Guessing: show underscores matching word length
     if (wordLen > 0) {
       return (
         <div className="flex items-baseline gap-1">
@@ -105,12 +100,11 @@ const WordBar: React.FC<WordBarProps> = ({
     <Card className="backdrop-blur-sm bg-white/95 shadow-lg border-2 border-black/10 py-0">
       <CardContent className="py-3 px-4">
         <div className="flex items-center gap-5">
-          {/* Countdown Timer - Server Synchronized */}
+          {/* Timer */}
           <div className="shrink-0">
             {showClock ? (
               <div className="relative" style={{ width: size, height: size }}>
                 <svg width={size} height={size} className="transform -rotate-90">
-                  {/* Trail */}
                   <circle
                     cx={size / 2}
                     cy={size / 2}
@@ -119,7 +113,6 @@ const WordBar: React.FC<WordBarProps> = ({
                     stroke="#e5e7eb"
                     strokeWidth={strokeWidth}
                   />
-                  {/* Progress */}
                   <circle
                     cx={size / 2}
                     cy={size / 2}
@@ -148,7 +141,6 @@ const WordBar: React.FC<WordBarProps> = ({
             )}
           </div>
 
-          {/* Divider */}
           <div className="w-px h-10 bg-border" />
 
           {/* Round Info */}
@@ -166,12 +158,11 @@ const WordBar: React.FC<WordBarProps> = ({
                 </span>
               </div>
 
-              {/* Divider */}
               <div className="w-px h-10 bg-border" />
             </>
           )}
 
-          {/* Game State + Word Display */}
+          {/* State Label + Word Display */}
           <div className="flex-1 flex flex-col items-center justify-center min-w-0">
             {isWaiting ? (
               <>

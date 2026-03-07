@@ -28,7 +28,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   selectedAvatar,
   onAvatarChange,
 }) => {
-  // Function to handle random avatar selection
   const handleRandomAvatar = () => {
     let randomId;
     do {
@@ -37,7 +36,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     onAvatarChange(randomId);
   };
 
-  // Get the current avatar based on selectedAvatar state
   const currentAvatar = avatars.find((avatar) => avatar.id === selectedAvatar);
 
   return (

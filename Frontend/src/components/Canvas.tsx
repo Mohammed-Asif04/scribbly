@@ -42,7 +42,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     }
   }, []);
 
-  // Update context when color or radius changes
+  // Sync context with current drawing settings
   useEffect(() => {
     if (!context) return;
     context.lineCap = "round";
@@ -50,7 +50,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     context.strokeStyle = color;
   }, [color, radius, context]);
 
-  // Listen for incoming drawings from other players
+  // Socket listeners: receive drawings, handle canvas sync for spectators
   useEffect(() => {
     if (!socket || !context) return;
 
@@ -74,7 +74,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
 
     socket.on("receiving", handleReceiving);
 
-    // Drawer: respond to canvas sync requests from mid-game joiners
+    // Drawer responds to sync requests from mid-game joiners
     const handleCanvasSyncRequest = ({ targetId }: { targetId: string }) => {
       if (!currentUserDrawing) return;
       const c = canvasRef.current;
@@ -84,7 +84,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     };
     socket.on("request-canvas-sync", handleCanvasSyncRequest);
 
-    // Joiner: receive a canvas snapshot from the drawer
+    // Joiner receives canvas snapshot from the drawer
     const handleCanvasSync = (data: string) => {
       const c = canvasRef.current;
       if (!c) return;
@@ -131,17 +131,17 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     socket.emit("sending", dataURL);
   }, [socket]);
 
-  // Throttled emit to avoid encoding PNG on every single mouse move
+  // Throttle canvas emit to avoid encoding PNG on every mouse move
   const emitThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const throttledEmit = useCallback(() => {
-    if (emitThrottleRef.current) return; // already scheduled
+    if (emitThrottleRef.current) return;
     emitThrottleRef.current = setTimeout(() => {
       emitCanvas();
       emitThrottleRef.current = null;
     }, 80);
   }, [emitCanvas]);
 
-  // --- Flood Fill Algorithm ---
+  // Flood fill helpers
   const hexToRgb = (hex: string): [number, number, number] => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
@@ -163,6 +163,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     );
   };
 
+  // Flood fill using a stack-based algorithm
   const floodFill = useCallback(
     (startX: number, startY: number, fillColor: string) => {
       if (!context) return;
@@ -188,7 +189,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
       const [fr, fg, fb] = hexToRgb(fillColor);
       const fillRgba: [number, number, number, number] = [fr, fg, fb, 255];
 
-      // Don't fill if clicking on the same color
+      // Skip if target and fill colors are the same
       if (
         Math.abs(targetColor[0] - fillRgba[0]) <= 5 &&
         Math.abs(targetColor[1] - fillRgba[1]) <= 5 &&
@@ -234,7 +235,6 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     const coordinates = getCoordinates(event);
     if (!coordinates) return;
 
-    // If fill mode, do flood fill at click position
     if (fillMode) {
       floodFill(coordinates.x, coordinates.y, color);
       return;
@@ -244,7 +244,6 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     setMousePosition(coordinates);
     if (context) {
       if (isEraser) {
-        // Erase a full circle on click
         context.save();
         context.fillStyle = "#FFFFFF";
         context.beginPath();
@@ -252,7 +251,6 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
         context.fill();
         context.restore();
       } else {
-        // Draw a dot at the start for single-click drawing
         context.strokeStyle = color;
         context.lineWidth = radius;
         context.beginPath();
@@ -269,10 +267,9 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     if (!mousePosition || !newPos) return;
 
     if (isEraser) {
-      // Erase along the path using filled circles for smooth coverage
+      // Erase along the path with filled circles for smooth coverage
       context.save();
       context.fillStyle = "#FFFFFF";
-      // Draw filled circles along the line from old to new position
       const dx = newPos.x - mousePosition.x;
       const dy = newPos.y - mousePosition.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -302,7 +299,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
   };
 
   const handleMouseUp = () => {
-    // Always emit final canvas state on mouse up for sync
+    // Flush any pending throttled emit for final sync
     if (emitThrottleRef.current) {
       clearTimeout(emitThrottleRef.current);
       emitThrottleRef.current = null;
@@ -325,7 +322,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
     emitCanvas();
   };
 
-  // Clear canvas when turn changes (new drawer starts)
+  // Clear canvas on turn change
   useEffect(() => {
     if (!socket || !context) return;
     const canvas = canvasRef.current;
@@ -354,7 +351,6 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
           height={480}
           onMouseDown={startPaint}
           onMouseMove={(e) => {
-            // Track cursor position in CSS pixels for overlay
             const canvas = canvasRef.current;
             if (canvas) {
               const rect = canvas.getBoundingClientRect();
@@ -375,7 +371,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
             !currentUserDrawing ? "cursor-not-allowed" : fillMode ? "cursor-pointer" : isEraser ? "cursor-none" : "cursor-crosshair"
           )}
         />
-        {/* Eraser circle cursor - uses CSS-scaled radius */}
+        {/* Eraser cursor */}
         {isEraser && currentUserDrawing && cursorPos && (() => {
           const canvas = canvasRef.current;
           const rect = canvas?.getBoundingClientRect();
@@ -395,7 +391,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
         })()}
       </div>
 
-      {/* Drawing Tools - only shown when it's the user's turn */}
+      {/* Drawing Tools */}
       {currentUserDrawing && (
         <div className="flex flex-col gap-2 p-3 bg-white/80 rounded-lg backdrop-blur-sm border border-gray-200">
           {/* Color Palette */}
@@ -425,7 +421,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
             />
           </div>
 
-          {/* Tool Buttons + Radius */}
+          {/* Tool Buttons + Size Slider */}
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant={!isEraser && !fillMode ? "default" : "outline"}
@@ -478,7 +474,7 @@ const Canvas: React.FC<CanvasProps> = ({ socket, currentUserDrawing }) => {
               🗑️ Clear
             </Button>
 
-            {/* Radius Slider */}
+            {/* Size Slider */}
             <div className="flex items-center gap-2 ml-auto">
               <span className="text-xs text-gray-500 font-medium">Size:</span>
               <input
