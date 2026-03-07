@@ -17,17 +17,14 @@ import {
 } from "./controllers/gameController.js";
 import { handleChat } from "./controllers/chatController.js";
 
-// Mount HTTP routes
 app.use("/", routes);
 
-// Socket.IO connection handler
+// ── Socket.IO Events ──
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
-
-  // Ask the client for their user data
   io.to(socket.id).emit("send-user-data", {});
 
-  // Receive user data and register the player
+  // Register player and handle mid-game joins
   socket.on("recieve-user-data", ({ username, avatar }) => {
     addPlayer(socket.id, username, avatar);
 
@@ -39,21 +36,21 @@ io.on("connection", (socket) => {
     if (players.length === 2) {
       startGame(io);
     } else if (players.length > 2 && isGameInProgress()) {
-      // Mid-game joiner: mark as waiting spectator
       setPlayerWaiting(socket.id, true);
       io.to(socket.id).emit("waiting-for-round", {
         message: "A round is in progress. You'll join when the current turn ends!",
       });
-      // Send current game state so spectator can see drawing + word hints
+
+      // Sync current game state and canvas to the spectator
       const gameState = getGameState();
       io.to(socket.id).emit("game-state-sync", gameState);
-      // Ask the drawer to send their current canvas to the new joiner
       const drawerId = getDrawerId();
       if (drawerId) {
         io.to(drawerId).emit("request-canvas-sync", { targetId: socket.id });
       }
       io.emit("updated-players", getPlayers());
     }
+
     if (players.length >= 2) {
       io.emit("game-already-started", {});
     }
@@ -64,22 +61,22 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("receiving", data);
   });
 
-  // Chat messages
+  // Chat message handling
   socket.on("sending-chat", (inputMessage) => {
     handleChat(io, socket, inputMessage);
   });
 
-  // Canvas sync response: drawer sends canvas data for a specific joiner
+  // Canvas sync: drawer sends snapshot to a specific joiner
   socket.on("canvas-sync-response", ({ targetId, data }) => {
     io.to(targetId).emit("canvas-sync", data);
   });
 
-  // Word selection by drawer
+  // Word selection by the drawer
   socket.on("word-select", (w) => {
     handleWordSelect(io, w);
   });
 
-  // Player disconnect
+  // Player disconnect and cleanup
   socket.on("disconnect", (reason) => {
     console.log("User disconnected:", socket.id, "Reason:", reason);
     const leavingPlayer = getPlayerById(socket.id);
@@ -98,7 +95,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// Start server
+// ── Start Server ──
 const PORT = 3001;
 server.listen(PORT, () => {
   console.log(`Scribbly server listening on port ${PORT}`);

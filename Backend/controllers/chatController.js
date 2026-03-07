@@ -22,26 +22,23 @@ export const handleChat = (io, socket, inputMessage) => {
   const word = getCurrentWord();
   let rightGuess = false;
 
-  // Check if the message matches the current word
+  // Correct guess detection — ignore drawer's own guesses and duplicates
   if (word && inputMessage && inputMessage.toLowerCase() === word.toLowerCase()) {
-    // Don't allow the drawer to guess their own word
     const drawerId = getDrawerId();
     if (userId === drawerId) return;
 
-    // Don't allow duplicate guesses
     const alreadyGuessed = getPlayerGuessedRightWord();
     if (alreadyGuessed.includes(userId)) return;
 
     console.log("Right guess by", userId);
     rightGuess = true;
 
-    // Guesser score: 300 × (timeRemaining / 75)
+    // Scoring: guesser gets time-based points, drawer gets flat bonus
     const remaining = getRemainingTime();
     const turnDuration = getTurnDuration();
     const guessScore = Math.round(BASE_POINTS * (remaining / turnDuration));
-    addPoints(userId, Math.max(guessScore, 10)); // minimum 10 points
+    addPoints(userId, Math.max(guessScore, 10));
 
-    // Drawer score: 50 per correct guess
     if (drawerId) {
       addPoints(drawerId, DRAWER_POINTS_PER_GUESS);
     }
@@ -56,11 +53,10 @@ export const handleChat = (io, socket, inputMessage) => {
 
   io.emit("recieve-chat", returnObject);
 
-  // Handle all-guessed-correct scenario
+  // End the turn early if all eligible players guessed correctly
   if (rightGuess) {
     addPlayerGuessedRight(userId);
 
-    // If all non-drawing, non-spectator players guessed correctly, end the turn
     if (getPlayerGuessedRightWord().length === players.length - 1 - getWaitingPlayers().length) {
       io.emit("all-guessed-correct", {});
       endTurn(io);

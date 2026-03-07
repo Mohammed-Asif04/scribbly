@@ -1,12 +1,12 @@
 import { getPlayers, activateWaitingPlayers } from "./playerController.js";
 
-// Game state
+// ── Game State ──
 let drawerIndex = 0;
 let word = null;
 let timeout = null;
 let timerInterval = null;
 let drawStartTime = null;
-const TURN_DURATION = 75; 
+const TURN_DURATION = 75;
 let round = 1;
 const TOTAL_ROUNDS = 3;
 let playerGuessedRightWord = [];
@@ -22,6 +22,8 @@ const clearTimers = () => {
   }
   drawStartTime = null;
 };
+
+// ── Game Lifecycle ──
 
 export const startGame = (io) => {
   console.log("Game started");
@@ -43,6 +45,8 @@ export const stopGame = (io) => {
   clearTimers();
 };
 
+// ── Turn Management ──
+
 export const startTurn = (io) => {
   const players = getPlayers();
   if (players.length === 0) return;
@@ -51,7 +55,6 @@ export const startTurn = (io) => {
     drawerIndex = 0;
   }
 
-  // Notify frontend to start turn with current drawer
   io.emit("start-turn", players[drawerIndex]);
 };
 
@@ -59,13 +62,10 @@ export const startDraw = (io) => {
   const players = getPlayers();
   io.emit("start-draw", players[drawerIndex]);
 
-  // Track the draw start time for synchronized timer
+  // Start server-authoritative timer and broadcast every second
   drawStartTime = Date.now();
-
-  // Emit initial timer value
   io.emit("timer-sync", TURN_DURATION);
 
-  // Broadcast remaining time every second to keep all clients in sync
   timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - drawStartTime) / 1000);
     const remaining = Math.max(0, TURN_DURATION - elapsed);
@@ -84,25 +84,20 @@ export const endTurn = (io) => {
 
   playerGuessedRightWord = [];
   clearTimers();
-
-  // Clear the canvas for all players before the next turn
   io.emit("clear-canvas");
 
-  // Activate any waiting (spectator) players so they join the next turn
+  // Activate spectators so they participate in the next turn
   activateWaitingPlayers();
   io.emit("waiting-players-activated");
-  // Send updated player list (isWaiting is now false for everyone)
   io.emit("updated-players", getPlayers());
 
-  // Advance to next drawer
+  // Advance drawer; if wrapped around, advance the round
   const nextDrawerIndex = (drawerIndex + 1) % players.length;
 
-  // If we've wrapped around (all players have drawn), advance the round
   if (nextDrawerIndex <= drawerIndex || players.length === 1) {
     round++;
     io.emit("round-update", { round, totalRounds: TOTAL_ROUNDS });
 
-    // Check if all rounds are complete
     if (round > TOTAL_ROUNDS) {
       console.log("All rounds complete, stopping game");
       stopGame(io);
@@ -114,12 +109,16 @@ export const endTurn = (io) => {
   startTurn(io);
 };
 
+// ── Word Selection ──
+
 export const handleWordSelect = (io, w) => {
   word = w;
   const wordLength = w.length;
   io.emit("word-len", wordLength);
   startDraw(io);
 };
+
+// ── State Accessors ──
 
 export const getCurrentWord = () => word;
 

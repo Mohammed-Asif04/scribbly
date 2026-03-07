@@ -1,4 +1,4 @@
-// In-memory player store
+// ── In-Memory Player Store ──
 const players = [];
 
 export const addPlayer = (id, name, avatar) => {
